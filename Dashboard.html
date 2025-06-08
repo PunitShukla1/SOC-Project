@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Event Monitor Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #0a0a0a;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .dashboard {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #1f1f1f 0%, #2d2d2d 100%);
+            padding: 1.5rem;
+            border-radius: 10px;
+            border: 1px solid #333;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+
+        .stat-label {
+            font-size: 0.9rem;
+            color: #ccc;
+            margin-top: 0.5rem;
+        }
+
+        .charts-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: linear-gradient(135deg, #1f1f1f 0%, #2d2d2d 100%);
+            padding: 1.5rem;
+            border-radius: 10px;
+            border: 1px solid #333;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .chart-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #00d4ff;
+        }
+
+        .alerts-section {
+            background: linear-gradient(135deg, #1f1f1f 0%, #2d2d2d 100%);
+            padding: 1.5rem;
+            border-radius: 10px;
+            border: 1px solid #333;
+            margin-bottom: 2rem;
+        }
+
+        .alert-item {
+            background: #ff4444;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid #ff0000;
+        }
+
+        .events-table {
+            background: linear-gradient(135deg, #1f1f1f 0%, #2d2d2d 100%);
+            padding: 1.5rem;
+            border-radius: 10px;
+            border: 1px solid #333;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+
+        th {
+            background-color: #2d2d2d;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+
+        .severity-critical { color: #ff4444; font-weight: bold; }
+        .severity-high { color: #ff8800; font-weight: bold; }
+        .severity-medium { color: #ffdd44; }
+        .severity-low { color: #88ff88; }
+
+        .status-open { color: #ff4444; }
+        .status-investigating { color: #ffdd44; }
+        .status-resolved { color: #88ff88; }
+
+        .btn {
+            padding: 0.3rem 0.8rem;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+
+        @media (max-width: 768px) {
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🛡️ Security Event Monitor Dashboard</h1>
+    </div>
+
+    <div class="dashboard">
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="total-events">0</div>
+                <div class="stat-label">Total Events Today</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="critical-events">0</div>
+                <div class="stat-label">Critical Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="open-events">0</div>
+                <div class="stat-label">Open Events</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="resolved-events">0</div>
+                <div class="stat-label">Resolved Events</div>
+            </div>
+        </div>
+
+        <!-- Alerts Section -->
+        <div class="alerts-section">
+            <h2 class="chart-title">🚨 Active Alerts</h2>
+            <div id="alerts-container">
+                <p style="color: #888;">No active alerts</p>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-container">
+            <div class="chart-card">
+                <h3 class="chart-title">Event Severity Distribution</h3>
+                <canvas id="severityChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3 class="chart-title">Events by Type</h3>
+                <canvas id="typeChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Events Table -->
+        <div class="events-table">
+            <h2 class="chart-title">Recent Security Events</h2>
+            <table id="events-table">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Event Type</th>
+                        <th>Severity</th>
+                        <th>Source IP</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="events-tbody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let severityChart, typeChart;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboard();
+            setInterval(loadDashboard, 30000); // Refresh every 30 seconds
+        });
+
+        async function loadDashboard() {
+            try {
+                await Promise.all([
+                    loadEvents(),
+                    loadStats(),
+                    loadAlerts()
+                ]);
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        async function loadEvents() {
+            const response = await fetch('/api/events');
+            const events = await response.json();
+            
+            const tbody = document.getElementById('events-tbody');
+            tbody.innerHTML = '';
+            
+            events.slice(0, 20).forEach(event => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${new Date(event.timestamp).toLocaleString()}</td>
+                    <td>${event.event_type}</td>
+                    <td class="severity-${event.severity.toLowerCase()}">${event.severity}</td>
+                    <td>${event.source_ip}</td>
+                    <td class="status-${event.status.toLowerCase().replace(' ', '-')}">${event.status}</td>
+                    <td>
+                        <button class="btn btn-warning" onclick="updateEventStatus(${event.id}, 'Investigating')">Investigate</button>
+                        <button class="btn btn-success" onclick="updateEventStatus(${event.id}, 'Resolved')">Resolve</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        async function loadStats() {
+            const response = await fetch('/api/stats');
+            const stats = await response.json();
+            
+            // Update stat cards
+            const total = Object.values(stats.severity).reduce((a, b) => a + b, 0);
+            document.getElementById('total-events').textContent = total;
+            document.getElementById('critical-events').textContent = stats.severity.Critical || 0;
+            
+            // Update charts
+            updateSeverityChart(stats.severity);
+            updateTypeChart(stats.event_types);
+        }
+
+        async function loadAlerts() {
+            const response = await fetch('/api/alerts');
+            const alerts = await response.json();
+            
+            const container = document.getElementById('alerts-container');
+            
+            if (alerts.length === 0) {
+                container.innerHTML = '<p style="color: #888;">No active alerts</p>';
+            } else {
+                container.innerHTML = alerts.map(alert => `
+                    <div class="alert-item">
+                        <strong>${alert.type}</strong> - ${alert.message}
+                    </div>
+                `).join('');
+            }
+        }
+
+        function updateSeverityChart(data) {
+            const ctx = document.getElementById('severityChart').getContext('2d');
+            
+            if (severityChart) {
+                severityChart.destroy();
+            }
+            
+            severityChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        data: Object.values(data),
+                        backgroundColor: [
+                            '#ff4444',
+                            '#ff8800',
